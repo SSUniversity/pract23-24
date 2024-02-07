@@ -226,7 +226,8 @@ export const authConfig: AuthOptions = { providers: [
 
 Ограниченик доступа неавторизованного пользователя к внутренним страницам достигается созданием файла middleware.ts, в котором через параметры указываются пути навигации и, в случае попадания в заданный путь, перевод клиента на страницу signIn.
 \begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
-export const config = { matcher: ['/profile/:path*', '/hh', '/resume','/protected/:path*'] }
+export const config = { matcher: ['/profile/:path*', '/hh', 
+    '/resume','/protected/:path*'] }
 \end{minted}
 
 Дополнительно к предыдущему пунту контроля доступа опишем корневой файл providers.tsx, созданный для окружения корневого элемента страницы в её компоненты, свойства стилей и сессию пользователя.
@@ -337,11 +338,8 @@ return
         Компонент отображения контактов и ссылок}
 \end{figure}
 
-
-
-
-Опишем компонент вывода образования и опыта работы. Для этого 
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
+Опишем компонент вывода образования и опыта работы. Для этого реализуем функционал подсчёта текущего затраченного времени через получение двух строковых и одной логической переменных из файла резюме, преобразования текста в объект даты и нахождения разницы между двумя величинами. После вычисления необходимо округлить полученное значение до целого числа и преобразовать в удобочитаемый внешний вид с помощью проверки количества месяцев и лет. Результатом работы функций станет вывод временного значения в строке компонента.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
 function diffDates(day_one:any, day_two:any) {
     return (day_one - day_two) / (60 * 60 * 24 * 1000);
 };
@@ -360,8 +358,7 @@ export const Experience = (props : ExperienceProps) => {
         const date1 = new Date(element.start_date);
         const date2 = element.current_date ? 
             new Date() : new Date(element.end_date)
-        return { getFormatedStringFromDays(diffDates(date1, date2)) } 
-    })
+        return { getFormatedStringFromDays(diffDates(element.start_date, element.end_date)) }})
     return  <>{experience_item_list}</>
 };
 \end{minted}
@@ -371,377 +368,121 @@ export const Experience = (props : ExperienceProps) => {
     \centering
     \includegraphics[width=12cm]{images/image-resume-2.png}
     \caption{\label{fig:3}%
-        Страница обновления навыков на плотформе hh.ru}
+        Компонент отображения опыта работы и образования}
 \end{figure}
 
-
-
-
-Компонент проектов, выводящий шахматную структуру 
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
+Для реализации портфолио в шахматном представлении воспользуемся классовыми атрибутами сетки из библиотеки Tailwind. Получим порядковый индекс списка проектов, начинающийся с нуля, и дальше в зависимости от чётности раздельно и поочерёдно позиционируем текст с 1 по 6 колонку и изображение с 7 по 13.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
 export const Projects = (props : ProjectsProps) => {
-    const projects = props.projects_list.map((element, index) => {
-        var position_image = index % 2 == 0 ? "col-start-7 col-end-13" : "col-start-1 col-span-6 ";
-        var position_text = index % 2 == 0 ? "col-start-1 col-end-6" : "col-start-8 col-end-13 order-1";
-
-        return (
-            <div className="grid grid-cols-12 gap-2 mb-12" key={index}>
-                <div className={position_text + " h-full flex flex-col justify-center"}>
-                    <h2 className="h6 uppercase text-start pb-4" id="projects">{element.name}</h2>
-                    <p className="text-start">{element.description}</p>
-                </div>
-                <div className={position_image}>
-                    <Image/>
-                </div>
-            </div>
-        )
-    })
-
-    return  <>{projects}</>
+const projects = props.projects_list.map((element, index) => {
+    var position_image = index % 2 == 0 ? 
+        "col-start-7 col-end-13" : "col-start-1 col-span-6 ";
+    var position_text = index % 2 == 0 ? 
+        "col-start-1 col-end-6" : "col-start-8 col-end-13 order-1";
+    return (
+        <div className={position_text}>
+            <h2>{element.name}</h2>
+            <p>{element.description}</p>
+        </div>
+        <Image className={position_image}/>
+    )})
+return <>{projects}</>
 };
 \end{minted}
 
-
-Итоговый вид компонента показан на рисунке 
+Итоговый вид компонента списка проектов показан на рисунке~\ref{fig:4}. 
 \begin{figure}[!ht]
     \centering
     \includegraphics[width=12cm]{images/image-resume-3.png}
     \caption{\label{fig:4}%
-        Страница обновления навыков на плотформе hh.ru}
+        Компонент отображения списка проектов}
 \end{figure}
 
-
-Произведём запрос данных у сервера и отобразим их в описанных ранее компонентах, передав в них  
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
+После описания компонентов реализуем страницу резюме, для этого необходимо произвести запрос данных резюме и передать его поля в соответвующие теги и компоненты.   
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
 export default function Template1Page() {
-    const profile_data = require("@/data-template/template-1-data.json");
-	return (
-		<div>
-			<h1 className="h6 text-uppercase text-center pb-4">
-                {profile_data.name}
-            </h1>
-            <p className="text-uppercase text-center pb-2">
-                {profile_data.description}
-            </p>
-            <SocialLink links = {profile_data.social_links}/>
-            <div className="grid grid-cols-8 gap-4 mb-12">
-                <div className="col-start-3 col-end-7">
-                    <Image
-                        isZoomed
-                        isBlurred
-                        alt={profile_data.name + " Image"}
-                        src={profile_data.profile_image}
-                    />
-                </div>
-            </div>
-			<div className="container pt-5 pb-5 text-left">
-				<h2 className="h6 uppercase text-end pb-4" id="about">about me</h2>
-                <About about_text={...profile_data.about}/>
-    		</div>
-            <div className="container pt-5 pb-5 text-left ">
-                <h2 className="h6 uppercase text-end pb-4" id="experience">education</h2>
-                <Experience experience_list={...profile_data.education}/>
-            </div>
-            <div className="container pt-5 pb-5 text-left ">
-                <h2 className="h6 uppercase text-end pb-4" id="experience">experience</h2>
-                <Experience experience_list={...profile_data.experience}/>
-            </div>
-            <div className="container pt-5 pb-5">
-                <h2 className="h6 uppercase text-end pb-4" id="projects">projects by companies</h2>
-                <Projects projects_list={...profile_data.projects}/>
-            </div>
-
-	    </div>
-	);
-}    
+const profile_data = require("@/data-template/template-1-data.json");
+return (
+<SocialLink links = {profile_data.social_links}/>
+...
+<div className="container pt-5 pb-5">
+    <h2 id="projects">projects by companies</h2>
+    <Projects projects_list={...profile_data.projects}/>
+</div>
+);}    
 \end{minted}
 
 
 
 
-\subsection{HH}
-Процесс авторизации пользователя через hh.ru представляет из себя 3 ступени:
+\subsection{Взаимодействие с сервисом hh.ru}
+Реализуем взаимодействие пользователя с сервисов hh.ru через API. Первоначальная конфигурация в виде авторизации состоит из 3 этапов:
 \begin{enumerate}
-    \item Перенаправление пользователя по адресу, с переданными параметрами приложения
-    \item Получение временного кода авторизации
-    \item Получение токена, кода доступа к API и кода обновления  
+    \item Перенаправление пользователя по адресу сервиса с переданными параметрами строки;
+    \item Получение временного кода авторизации;
+    \item Обмен кода авторизации на долгосрочный токен доступа к профилю и кода обновления токена в случае необходимости. 
 \end{enumerate}
 
-
-В api/hh/route.tsx опишем получение токена авторизации и если он есть, получения резюме
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
+Первый этап достигается с помощью передачи параметров строки запроса через вопросительный знак, имя параметра и значение. В ответ на полученную от сервиса hh.ru ссылку с переходом необходимо обработать ответный параметр временного кода авторизации и обмена на долгосрочный. Опишем данный функционал в api/hh/route.tsx, для этого необходимо реализовать GET запрос, предварительно считывающий строку запроса и параметр code, в заголовок которого добавляем желаемое действие, открытый и секретный идентификаторы приложения и полученный на предыдущем обработчике код. Так как функция запросов асинхронна – воспользуемся обработчиком событий и через ожидающий обратный вызов функции передадим запрос по адресу сервиса, получив в ответ необходимый набор данных: ответ об успешности запроса и токены.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
 export async function GET(req: Request) {
-
 const { searchParams } = new URL(req.url)
 const code = searchParams.get('code');
-const token = searchParams.get('token');
-
-
 if (code != null) {
     var myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
-
     var urlencoded = new URLSearchParams();
     urlencoded.append("grant_type", "authorization_code");
     urlencoded.append("client_id", process.env.HH_ID!);
     urlencoded.append("client_secret", process.env.HH_SECRET!);
     urlencoded.append("code", code!);
-
     try {
         const res = await fetch("https://hh.ru/oauth/token", {
-            method: 'POST',
-            headers: myHeaders,
-            body: urlencoded,
-            redirect: 'follow',
-        });
-            
+            method: 'POST', headers: myHeaders,
+            body: urlencoded, redirect: 'follow' });   
         const result = await res.json();
         return NextResponse.json(result);
-    } 
-    catch (error) {
-        console.log(error);
-    }
-} 
+}} 
+\end{minted}
 
-
+После получения долгосрочного токена для конкретного пользователя, у приложения появляется возможность воспользоваться доступом к сервису hh.ru. Получим все существующие резюме человека и выведем их на страницу. Для этого отправим GET запрос с токеном авторизации по заданному маршруту и вернём данные в формате JSON.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
+const token = searchParams.get('token');
 if (token != null) {
     var myHeaders = new Headers();
     myHeaders.append("Authorization", `Bearer ${token}`);
-
     try {
         const res = await fetch("https://api.hh.ru/resumes/mine", {
-            method: 'GET',
-            headers: myHeaders,
-            redirect: 'follow',
-        });
-            
+            method: 'GET', headers: myHeaders, redirect: 'follow' });      
         const result = await res.json();
         return NextResponse.json(result);
-    } 
-    catch (error) {
-        console.log(error);
-    }
-}
-return NextResponse.json("bad request");
-}
+}}
 \end{minted}
 
 
 
-В api/hh/route.tsx опишем обновление резюме
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
-export async function PUT(req: Request) {
-    const { searchParams } = new URL(req.url)
-    const resume = searchParams.get('resume');
 
-    if (resume != null) {
-        const body = await req.json()
-        
-        var myHeaders = new Headers();
-        myHeaders.append("User-Agent", process.env.HH_APP_DATA!);
-        myHeaders.append("Content-Type", "application/json");
-        myHeaders.append("Authorization", `Bearer ${process.env.HH_USER}`);
-
-        var raw = JSON.stringify( body );
-
-        try {
-            const res = await fetch(`https://api.hh.ru/resumes/${resume}`, {
-                method: 'PUT',
-                headers: myHeaders,
-                body: raw,
-                redirect: 'follow'
-            })
-            return NextResponse.json({ message: "Resume has been updated" });
-        } 
-        catch (error) {
-            console.log(error);
-            return NextResponse.json({ message: error });
-        }
-    }  
-}
-\end{minted}
-
-
-
-Для взаимодействия с апи между клиентской и серверной частью опишем методы getUserResume и 
-getUserToken, получающие токен и код данных
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
-export async function getUserResume(token: string) {
-	try {
-		const response = await fetch('/api/hh?token=' + token);
-		const data = await response.json();
-
-		if (!data.error) {
-			return data.access_token;
-		} else {
-			return data.error;
-		}
-		
-	} catch (error){
-		console.log(error);
-	}
-}
-\end{minted}
-
-
-И теперь опишем страницу авторизации через hh
+\subsection{Реализация страниц сравнения и обновления резюме}
+Страница сравнения навыков представляет из себя таблицу, содержащую наименование поля, значения совпадающих ключей для каждого из входных резюме и поле взаимодействие, содержащее возможность добавления собственного значения, а также удаления строки. Так как резюме содержит в себе значениях разных типов, их отображение будет возможно только при сепарации. Для этого реализуем компонент сравнения, получающий значение свойства из JSON и далее в случае одиночной строки возвращающий тег с его содержимым, в случае списка строк обрабатывающий каждую из них, присваивающую уникальный индекс отображения, а в случае более глубокой вложенности добавляющей перед элементом его наименование.
 \begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
-export default function HHSignInPage() {
-
-const searchParams = useSearchParams()
-const code = searchParams.get('code')
-
-const [url, setUrl] = React.useState('')
-React.useEffect(() => {
-    getDownloadURL().then(setUrl)
-}, [])
-async function getDownloadURL(){
-    const resultData = getUserToken(code!);
-    return await Promise.resolve(resultData)
-}
-return (
-    <section className="flex flex-col items-center justify-center gap-24 ">
-        <h1>HH Sign In Page</h1>
-
-        <div className="flex flex-col items-center justify-center gap-2">
-            SignIn Token:
-            <Code size="lg">{code}</Code>
-        </div>
-        
-        <div className="flex flex-col items-center justify-center gap-2">
-            Access Token:
-            <Suspense fallback={<div>Loading...</div>}>
-                <Code size="lg">{url}</Code>
-                <p className="opacity-60 mb-24">Сохраните токен из поля выше для дальнейшей работы с сайтом</p>
-
-                <Link isExternal href={'/api/hh?token=' + url}>
-                    <Button>Посмотреть мои резюме</Button>
-                </Link>
-
-            </Suspense>
-        </div>
-
-    
-    </section>
-);
-}   
-\end{minted}
-
-
-\subsection{Страница сравнения навыков}
-Для страницы сравнения навыков реализуем компонент строки, принимающей строку данных
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
-export const ActionFieldButton = () => {
+if (typeof props.cv_editor == "string") {
+    cv_editor_item_list = <div>{props.cv_editor}</div>;
+} else {
+    Object.keys(props.cv_editor).map((element, index) => {
+    let arrObj = props.cv_editor[element];
+    if (typeof arrObj == "object") {
+    cv_editor_item_list = props.cv_editor.map((element: any, index:any) => {
     return (
-        <div className="flex gap-4 items-center">
-            <Button color="success" variant="bordered">
-                Add item
-            </Button>    
-            <Button color="danger" variant="bordered" className="min-w-0">
-                <DeleteIcon/>
-            </Button>
-        </div>
-    )
-}
-
-export const Comparison = (props: ComparisonItemProps) => {
-    
-
-    let cv_editor_item_list;
-    if (typeof props.cv_editor == "string") {
-        cv_editor_item_list = <div>{props.cv_editor}</div>;
+        {Object.keys(element).map((el, index) => {
+        return( <div key={index}>{el}: {element[el]}</div> );})}
+    );});  
     } else {
-        Object.keys(props.cv_editor).map((element, index) => {
-            let arrObj = props.cv_editor[element];
-            if (typeof arrObj == "object") {
-                cv_editor_item_list = props.cv_editor.map((element: any, index:any) => {
-                    return (
-                        <div key={index}>
-                            {Object.keys(element).map((el, index) => {
-                                return( 
-                                    <div key={index}>
-                                        <span className="font-bold opacity-40">{el}: </span>{element[el]}
-                                    </div> 
-                                );
-                            })}
-                            <Spacer y={4} />
-                        </div>
-                    );
-                });  
-            } else {
-                cv_editor_item_list = props.cv_editor.map((element: any, index:any) => {
-                    return (
-                        <div key={index}>
-                            {element}
-                            <Spacer y={2} />
-                        </div>
-                    );
-                })
-            }
-        });
-    }
-
-
-    let hh_ru_item_list;
-    if (typeof props.hh_ru == "string") {
-        hh_ru_item_list = <div>{props.hh_ru}</div>;
-    } else {
-        Object.keys(props.hh_ru).map((element, index) => {
-            let arrObj = props.hh_ru[element];
-            if (typeof arrObj == "object") {
-                hh_ru_item_list = props.hh_ru.map((element: any, index:any) => {
-                    return (
-                        <div key={index}>
-                            {Object.keys(element).map((el, index) => {
-                                return( 
-                                    <div key={index}>
-                                        <span className="font-bold opacity-40">{el}: </span>{element[el]}
-                                    </div> 
-                                );
-                            })}
-                            <Spacer y={4} />
-                        </div>
-                    );
-                });  
-            } else {
-                hh_ru_item_list = props.hh_ru.map((element: any, index:any) => {
-                    return (
-                        <div key={index}>
-                            {element}
-                            <Spacer y={2} />
-                        </div>
-                    );
-                })
-            }
-        });
-    }
-
-
-
-    return  (
-        <section className="">        
-            <Divider className="my-8" />
-
-            <RadioGroup orientation="horizontal" defaultValue="answer-1" className="flex gap-2 mb-4 text-start ">     
-                <div className="w-1/6 items-start font-bold opacity-80">
-                    {props.name}
-                </div>
-                <Radio value="answer-1" className="w-2/6 max-w-full items-start">
-                    {cv_editor_item_list}
-                </Radio>
-                <Radio value="answer-2" className="w-2/6 max-w-full items-start">
-                    {hh_ru_item_list}
-                </Radio>
-                <Radio value="answer-3" className="w-1/6 max-w-full items-start">
-                    <ActionFieldButton />
-                </Radio>  
-            </RadioGroup>
-  
-        </section>
-
-    )};    
+        cv_editor_item_list = props.cv_editor.map((element: any, index:any) => 
+        { return {element}; })
+}});}
 \end{minted}
 
+Итоговый вид страницы сравнения навыков показан на рисунке~\ref{fig:5}. 
 \begin{figure}[!ht]
     \centering
     \includegraphics[width=12cm]{images/image-compare-skills.png}
@@ -749,104 +490,50 @@ export const Comparison = (props: ComparisonItemProps) => {
         Страница сравнения навыков}
 \end{figure}
 
-
-
-
-\subsection{Страница обновления навыков}
-Для страницы обновления навыков обратимся к ранее описанному апи
-\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{ts}
-export default function ResumePage() {
-	
-	const session = useSession();
-	const profile_data = require("@/data-template/template-hh-data.json");
-
-	const initialSkills = profile_data.skill_set
-	const [skill_set, setSkill_set] = React.useState(initialSkills);
-	
-	const handleClose = (skillToRemove:any) => {
-		setSkill_set(skill_set.filter((fruit: any) => fruit !== skillToRemove));
-		if (skill_set.length === 1) {
-		  setSkill_set(initialSkills);
-		}
-	};
-
-	const skills_body = JSON.parse(JSON.stringify(`{"skill_set": [${skill_set.map((x: any) => `"${x}"`)}]}`))
-	function updateResume() {
-		const postData = async () => {
-
-			const response = await fetch("/api/hh?resume=986544fbff0b05dce60039ed1f53716830586e", {
-				method: "PUT",
-				body: skills_body,
-			});
-			console.log(skills_body);
-			return response.json();
-		};
-		postData().then((data) => {
-			console.log(data.message);
-		});
-	}
-
-	const [inputValue, setInputValue] = React.useState("");
-
-
-	return (
-		<section className="flex flex-col items-center justify-center gap-24">
-			<h1 className={title()}>Резюме HH.ru</h1>
-
-
-
-			<div className="">
-				<h2 className="mb-4">	
-					Навыки 
-					<span className="opacity-100">
-						{skill_set == initialSkills? 
-						<div className="text-green-600"> [ не изменено ]</div> 
-						: 
-						<div className="text-yellow-600"> [ изменено ]</div>}
-					</span>
-				</h2>
-				<div className="flex flex-wrap gap-2">
-					{skill_set.map((skill: any, index: any) => (
-						<Chip key={index} onClose={() => handleClose(skill)} variant="flat">
-							{skill}
-						</Chip>
-					))}
-				</div>
-			</div>
-
-			<div className="w-full flex flex-col gap-2 items-center justify-center max-w-[640px]">
-				<Input
-					label="Skill"
-					placeholder="Add skill to pool"
-					value={inputValue}
-					onValueChange={setInputValue}
-				/>
-				<Button 
-					className="max-w-[240px]"
-					onClick={() => { setSkill_set([...skill_set, inputValue]); }}
-				>
-					Добавить навык
-				</Button>
-			</div>
-			
-			<Button onClick={updateResume}>Обновить резюме</Button>
-			
-
-		</section>
-	);
-}
+В серверной части платформы реализуем API метод для обновления данных резюме на сервисе hh.ru. Для этого в файле api/hh/route.tsx опишем PUT запрос, в заголовок которого передаётся токен пользователя и ссылка на идентификатор резюме, а в тело наименование поля данных с его содержимым. После выполнения запроса в ответ от внутреннего сервера вернётся JSON с кодом и сообщением об успешности выполненной операции.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
+export async function PUT(req: Request) {
+if (resume != null) {
+    const body = await req.json()      
+    var raw = JSON.stringify( body );
+    try { const res = await fetch(`https://api.hh.ru/resumes/${resume}`,{
+        method: 'PUT', headers: myHeaders,
+        body: raw, redirect: 'follow' })
+    return NextResponse.json({ message: "Resume has been updated" });
+}}}
 \end{minted}
 
+Реализуем страницу обновления навыков, для которой запросим и выведем данные из резюме hh.ru в виде списка тегов с возможностью их удаления из списка. Для этого создадим страницу и инициализируем начальное состояние значений и функцию удаления, проверяющую количество элементов и в случае их полного удаления возвращающего к исходному значению.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
+export default function ResumePage() {
+    const [skill_set, setSkill_set] = React.useState(initialSkills);
+    const handleClose = (skillToRemove:any) => {
+        setSkill_set(skill_set.filter((skill: any) => 
+            skill !== skillToRemove));
+        if (skill_set.length === 1) {setSkill_set(initialSkills);}
+}};
+\end{minted}
 
-Итоговый вид страницы обновления навыков представлен на рисунке~\ref{fig:1} 
+Добавим кнопку обновления резюме, по нажатию на которую вызывается функция-обработчик массива строк с преобразованием их к объектному формату JSON и помещающая итоговое значение в тело PUT запроса, отправляющего сообщение через внутрненний сервер на сервис hh.ru.
+\begin{minted}[fontsize=\small, breaklines=true, style=bw, linenos]{text}
+const skills_body = JSON.parse(JSON.stringify
+    (`{"skill_set": [${skill_set.map((x: any) => `"${x}"`)}]}`))
+return (
+skill_set.map((skill: any, index: any) => (
+    <Chip key={index} onClose={() => handleClose(skill)} variant="flat">
+        {skill}
+    </Chip>
+    <Button onClick={updateResume}>Обновить резюме</Button>
+)))
+\end{minted}
+
+Итоговый вид страницы обновления навыков, содержащей статус изменения списка, редактируемое поле ввода и теги представлен на рисунке~\ref{fig:6}. 
 \begin{figure}[!ht]
     \centering
     \includegraphics[width=12cm]{images/image-update-skills.png}
     \caption{\label{fig:6}%
-        Страница обновления навыков на плотформе hh.ru}
+        Страница обновления навыков}
 \end{figure}
-
-
 
 
 
@@ -898,10 +585,6 @@ export default function ResumePage() {
 % Окончание основного документа и начало приложений Каждая последующая секция
 % документа будет являться приложением
 \appendix
-
-
-\section{Код Компонента}
-Да
 
 
 \end{document}
